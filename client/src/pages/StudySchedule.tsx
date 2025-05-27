@@ -45,7 +45,7 @@ export default function StudySchedule() {
     const importParam = urlParams.get('import');
     if (importParam) {
       try {
-        const decodedSchedule = JSON.parse(atob(importParam));
+        const decodedSchedule = JSON.parse(decodeSchedule(importParam));
         setImportSchedule(decodedSchedule);
         setShowImportModal(true);
         // Remove the import parameter from URL
@@ -570,6 +570,15 @@ export default function StudySchedule() {
     }
   };
 
+  // Helper functions for encoding
+  const encodeSchedule = (str: string): string => {
+    return btoa(unescape(encodeURIComponent(str)));
+  };
+
+  const decodeSchedule = (str: string): string => {
+    return decodeURIComponent(escape(atob(str)));
+  };
+
   const shareSchedule = () => {
     if (activeSessions.length === 0) {
       toast({
@@ -593,7 +602,7 @@ export default function StudySchedule() {
     };
 
     // Encode the schedule data
-    const encodedSchedule = btoa(JSON.stringify(shareableSchedule));
+    const encodedSchedule = encodeSchedule(JSON.stringify(shareableSchedule));
     const generatedShareUrl = `${window.location.origin}/study-schedule?import=${encodedSchedule}`;
     
     setShareUrl(generatedShareUrl);
@@ -832,20 +841,22 @@ export default function StudySchedule() {
               يمكنك مشاركة هذا الرابط مع الآخرين لإضافة جدولك إلى جدولهم
             </p>
             
-            <div className="bg-muted border rounded-lg p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1 text-sm break-all overflow-hidden">
+            <div className="bg-muted border rounded-lg p-3">
+              <div className="space-y-3">
+                <div className="text-sm font-mono break-all leading-relaxed">
                   {shareUrl}
                 </div>
-                <Button
-                  onClick={copyShareUrl}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2 whitespace-nowrap"
-                >
-                  <Copy className="h-4 w-4" />
-                  نسخ
-                </Button>
+                <div className="flex justify-center">
+                  <Button
+                    onClick={copyShareUrl}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Copy className="h-4 w-4" />
+                    نسخ الرابط
+                  </Button>
+                </div>
               </div>
             </div>
 
