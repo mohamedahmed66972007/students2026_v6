@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Clock, CheckCircle, AlertCircle, Copy, Trash2, Edit3, Download } from "lucide-react";
 import AddStudySessionModal from "@/components/AddStudySessionModal";
 import EditStudySessionModal from "@/components/EditStudySessionModal";
@@ -820,57 +821,66 @@ export default function StudySchedule() {
       )}
 
       {/* Share Schedule Modal */}
-      {showShareModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full">
-            <div className="p-6">
-              <h2 className="text-xl font-bold mb-4 text-center">مشاركة جدول المذاكرة</h2>
-              <p className="text-gray-600 dark:text-gray-300 mb-4 text-center">
-                يمكنك مشاركة هذا الرابط مع الآخرين لإضافة جدولك إلى جدولهم
-              </p>
-              
-              <div className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-4 mb-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 text-sm break-all overflow-hidden">
-                    {shareUrl}
-                  </div>
-                  <Button
-                    onClick={copyShareUrl}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2 whitespace-nowrap"
-                  >
-                    <Copy className="h-4 w-4" />
-                    نسخ
-                  </Button>
+      <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+        <DialogContent className="max-w-lg w-[95vw]">
+          <DialogHeader>
+            <DialogTitle className="text-center">مشاركة جدول المذاكرة</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p className="text-muted-foreground text-center">
+              يمكنك مشاركة هذا الرابط مع الآخرين لإضافة جدولك إلى جدولهم
+            </p>
+            
+            <div className="bg-muted border rounded-lg p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 text-sm break-all overflow-hidden">
+                  {shareUrl}
                 </div>
-              </div>
-
-              <div className="flex gap-2 justify-center">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowShareModal(false)}
-                  className="flex-1"
+                <Button
+                  onClick={copyShareUrl}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 whitespace-nowrap"
                 >
-                  إغلاق
+                  <Copy className="h-4 w-4" />
+                  نسخ
                 </Button>
               </div>
             </div>
+
+            <div className="flex gap-2 justify-center">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowShareModal(false)}
+                className="flex-1"
+              >
+                إغلاق
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Import Schedule Modal */}
-      {showImportModal && importSchedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-xl font-bold mb-4">إضافة جدول مذاكرة مشترك</h2>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
+      <Dialog open={showImportModal} onOpenChange={(open) => {
+        if (!open) {
+          setShowImportModal(false);
+          setImportSchedule(null);
+        }
+      }}>
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>إضافة جدول مذاكرة مشترك</DialogTitle>
+          </DialogHeader>
+          
+          {importSchedule && (
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
                 هل تريد إضافة هذا الجدول إلى جدولك الشخصي؟
               </p>
               
-              <div className="space-y-4 mb-6">
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto">
                 {importSchedule.sessions.map((session: any, index: number) => (
                   <div key={index} className="border rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
@@ -880,7 +890,7 @@ export default function StudySchedule() {
                       />
                       <span className="font-medium">{getSubjectName(session.subject)}</span>
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">
+                    <div className="text-sm text-muted-foreground">
                       <div>من: {dayjs(session.startDate).format("DD/MM/YYYY - h:mm A")}</div>
                       <div>إلى: {dayjs(session.endDate).format("DD/MM/YYYY - h:mm A")}</div>
                       <div className="mt-2">
@@ -911,9 +921,9 @@ export default function StudySchedule() {
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
