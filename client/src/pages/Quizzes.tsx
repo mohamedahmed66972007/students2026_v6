@@ -49,52 +49,54 @@ const Quizzes: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <h2 className="text-2xl font-bold text-gray-800 dark:text-white">الاختبارات التفاعلية</h2>
 
-        <div className="flex items-center gap-4">
-          <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="جميع المواد" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">جميع المواد</SelectItem>
-              {subjectOptions.map(option => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {/* Search Quiz */}
-          <div className="relative flex items-center">
-            <Input
-              type="text"
-              placeholder="ابحث عن اختبار بالرمز"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4"
-            />
-            <Search className="h-4 w-4 absolute right-3 text-muted-foreground" />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
+            <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue placeholder="جميع المواد" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">جميع المواد</SelectItem>
+                {subjectOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {/* Search Quiz */}
+            <div className="relative flex items-center w-full sm:w-auto">
+              <Input
+                type="text"
+                placeholder="ابحث عن اختبار بالرمز"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 w-full"
+              />
+              <Search className="h-4 w-4 absolute right-3 text-muted-foreground" />
+            </div>
           </div>
 
-
           {!showCreateQuizModal && (
-            <>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <Button 
                 onClick={() => setShowCreateQuizModal(true)} 
                 variant="default"
-                className="bg-secondary hover:bg-secondary/90 flex items-center space-x-1 space-x-reverse"
+                className="bg-secondary hover:bg-secondary/90 flex items-center justify-center space-x-1 space-x-reverse w-full sm:w-auto"
               >
                 <PlusIcon className="h-4 w-4 ml-2" />
-                <span>إنشاء اختبار جديد</span>
+                <span className="text-sm sm:text-base">إنشاء اختبار جديد</span>
               </Button>
               <Button 
                 onClick={() => setShowCreateVocabQuizModal(true)} 
                 variant="outline"
-                className="flex items-center space-x-1 space-x-reverse"
+                className="flex items-center justify-center space-x-1 space-x-reverse w-full sm:w-auto"
               >
                 <PlusIcon className="h-4 w-4 ml-2" />
-                <span>اختبار كلمات إنجليزية</span>
+                <span className="text-sm sm:text-base">اختبار كلمات إنجليزية</span>
               </Button>
-            </>
+            </div>
           )}
         </div>
       </div>
