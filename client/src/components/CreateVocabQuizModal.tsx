@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuizzes } from "@/hooks/useQuizzes";
 import {
@@ -56,23 +55,30 @@ const CreateVocabQuizModal: React.FC<CreateVocabQuizModalProps> = ({ isOpen, onC
   };
 
   const generateAcceptedAnswers = (arabicText: string): string[] => {
-    const baseAnswer = normalizeArabicText(arabicText);
-    const originalAnswer = arabicText.trim();
+    // تقسيم النص بناءً على الفاصل / أو \
+    const meanings = arabicText.split(/[\/\\]/).map(meaning => meaning.trim()).filter(meaning => meaning.length > 0);
     
-    // قائمة الإجابات المقبولة
-    const acceptedAnswers = [originalAnswer, baseAnswer];
+    const allAcceptedAnswers: string[] = [];
     
-    // إضافة نسخ مع اللواحق المختلفة
-    const suffixes = ['ة', 'ه', 'ات', 'ون', 'ين', 'ان'];
-    suffixes.forEach(suffix => {
-      acceptedAnswers.push(baseAnswer + suffix);
-      if (!originalAnswer.endsWith(suffix)) {
-        acceptedAnswers.push(originalAnswer + suffix);
-      }
+    meanings.forEach(meaning => {
+      const baseAnswer = normalizeArabicText(meaning);
+      const originalAnswer = meaning.trim();
+      
+      // إضافة الإجابة الأصلية والمطبعة
+      allAcceptedAnswers.push(originalAnswer, baseAnswer);
+      
+      // إضافة نسخ مع اللواحق المختلفة
+      const suffixes = ['ة', 'ه', 'ات', 'ون', 'ين', 'ان'];
+      suffixes.forEach(suffix => {
+        allAcceptedAnswers.push(baseAnswer + suffix);
+        if (!originalAnswer.endsWith(suffix)) {
+          allAcceptedAnswers.push(originalAnswer + suffix);
+        }
+      });
     });
     
     // إزالة المكررات والفراغات
-    return [...new Set(acceptedAnswers.filter(answer => answer.length > 0))];
+    return [...new Set(allAcceptedAnswers.filter(answer => answer.length > 0))];
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -227,11 +233,11 @@ const CreateVocabQuizModal: React.FC<CreateVocabQuizModalProps> = ({ isOpen, onC
                 value={arabicMeanings}
                 onChange={(e) => setArabicMeanings(e.target.value)}
                 rows={10}
-                placeholder="اكتب المعاني العربية، معنى في كل سطر&#10;مثال:&#10;كتاب&#10;منزل&#10;سيارة&#10;مدرسة"
+                placeholder="اكتب المعاني العربية، معنى في كل سطر&#10;مثال:&#10;كتاب&#10;منزل / بيت&#10;سيارة \ عربة&#10;مدرسة"
                 required
               />
               <p className="text-sm text-gray-500">
-                اكتب كل معنى عربي في سطر منفصل بنفس ترتيب الكلمات الإنجليزية
+                اكتب كل معنى عربي في سطر منفصل. يمكنك إضافة معاني متعددة للكلمة الواحدة باستخدام / أو \
               </p>
             </div>
           </div>
@@ -242,6 +248,7 @@ const CreateVocabQuizModal: React.FC<CreateVocabQuizModalProps> = ({ isOpen, onC
             </h4>
             <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
               <li>• تأكد من أن عدد الكلمات الإنجليزية يساوي عدد المعاني العربية</li>
+              <li>• يمكنك إضافة معاني متعددة للكلمة الواحدة باستخدام / أو \ (مثال: بث / اذاعة)</li>
               <li>• سيتم تجاهل اختلافات الهمزة والتاء المربوطة في التصحيح</li>
               <li>• سيتم تجاهل الفرق بين المفرد والجمع في التصحيح</li>
               <li>• ستظهر الكلمات بترتيب عشوائي للطلاب</li>
