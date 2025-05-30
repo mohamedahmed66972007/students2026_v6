@@ -37,13 +37,13 @@ const TakeQuiz = () => {
             option: opt,
             isCorrect: idx === question.correctAnswer
           }));
-          
+
           // Shuffle the pairs
           for (let i = optionPairs.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [optionPairs[i], optionPairs[j]] = [optionPairs[j], optionPairs[i]];
           }
-          
+
           // Update question with shuffled options and new correct answer index
           return {
             ...question,
@@ -59,9 +59,9 @@ const TakeQuiz = () => {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
-      
+
       setRandomizedQuestions(shuffled);
-      
+
       if (!selectedAnswers.length) {
         setSelectedAnswers(new Array(questions.length).fill(-1));
       }
@@ -94,6 +94,31 @@ const TakeQuiz = () => {
     setSelectedAnswers(newAnswers);
   };
 
+  const normalizeText = (text: string): string => {
+    let normalized = text
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ')
+      // تطبيع الهمزات
+      .replace(/[أإآ]/g, 'ا')
+      .replace(/[ؤ]/g, 'و')
+      .replace(/[ئ]/g, 'ي')
+      // تطبيع التاء المربوطة والهاء
+      .replace(/[ة]/g, 'ه')
+      // إزالة التشكيل
+      .replace(/[\u064B-\u0652]/g, '');
+    
+    // إزالة جميع أشكال الجمع والمفرد الشائعة
+    const pluralSuffixes = ['ات', 'ون', 'ين', 'ان', 'ها', 'هم', 'هن', 'كم', 'كن'];
+    pluralSuffixes.forEach(suffix => {
+      if (normalized.endsWith(suffix)) {
+        normalized = normalized.slice(0, -suffix.length);
+      }
+    });
+    
+    return normalized;
+  };
+
   const calculateScore = () => {
     if (!questions) return 0;
 
@@ -101,9 +126,31 @@ const TakeQuiz = () => {
 
     questions.forEach((question, index) => {
       if (question.type === 'essay') {
-        const userAnswer = selectedAnswers[index]?.toString().trim().toLowerCase();
-        const acceptedAnswers = question.acceptedAnswers?.map(answer => answer.trim().toLowerCase()) || [];
-        if (userAnswer && acceptedAnswers.includes(userAnswer)) {
+        const userAnswer = normalizeText(selectedAnswers[index]?.toString() || '');
+        const acceptedAnswers = question.acceptedAnswers?.map(answer => normalizeText(answer)) || [];
+        
+        // التحقق من تطابق الإجابة مع أي من الإجابات المقبولة
+        const isCorrect = acceptedAnswers.some(acceptedAnswer => {
+          // مقارنة مباشرة بعد التطبيع
+          if (userAnswer === acceptedAnswer) return true;
+          
+          // مقارنة إضافية للكلمات العربية
+          const userWords = userAnswer.split(' ').filter(w => w.length > 0);
+          const acceptedWords = acceptedAnswer.split(' ').filter(w => w.length > 0);
+          
+          if (userWords.length === acceptedWords.length) {
+            return userWords.every((userWord, idx) => {
+              const acceptedWord = acceptedWords[idx];
+              // مقارنة مباشرة أو بعد إزالة أحرف الجمع
+              return userWord === acceptedWord ||
+                     userWord.replace(/ات$|ون$|ين$|ان$/, '') === acceptedWord.replace(/ات$|ون$|ين$|ان$/, '');
+            });
+          }
+          
+          return false;
+        });
+        
+        if (isCorrect) {
           correctCount++;
         }
       }
@@ -255,7 +302,7 @@ const TakeQuiz = () => {
                 <div key={index} className={`p-4 rounded-lg ${
                   question.type === 'essay'
                     ? question.acceptedAnswers?.some(answer => 
-                        answer.toLowerCase().trim() === selectedAnswers[index]?.toString().toLowerCase().trim()
+                        normalizeText(answer) === normalizeText(selectedAnswers[index]?.toString() || '')
                       )
                       ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900'
                       : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900'
@@ -269,7 +316,7 @@ const TakeQuiz = () => {
                       <p className="p-2 rounded bg-gray-50 dark:bg-gray-800">إجابتك: {selectedAnswers[index]}</p>
                       <p className="p-2 rounded bg-green-50 dark:bg-green-900/20">الإجابة الصحيحة: {
                         question.acceptedAnswers?.find(answer => 
-                          answer.toLowerCase().trim() === selectedAnswers[index]?.toString().toLowerCase().trim()
+                          normalizeText(answer) === normalizeText(selectedAnswers[index]?.toString() || '')
                         ) || question.acceptedAnswers?.[0]
                       }</p>
                     </div>
