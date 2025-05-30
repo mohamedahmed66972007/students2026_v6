@@ -54,6 +54,26 @@ const CreateVocabQuizModal: React.FC<CreateVocabQuizModalProps> = ({ isOpen, onC
     return normalized;
   };
 
+  const removeDefiniteArticle = (text: string): string => {
+    // إزالة "ال" التعريف من بداية الكلمة
+    return text.replace(/^ال/, '');
+  };
+
+  const generateGenderVariations = (text: string): string[] => {
+    const variations = [text];
+    
+    // إضافة نسخة بدون التاء المربوطة أو الهاء في نهاية الكلمة
+    if (text.endsWith('ة') || text.endsWith('ه')) {
+      variations.push(text.slice(0, -1));
+    } else {
+      // إضافة نسخة مع التاء المربوطة والهاء
+      variations.push(text + 'ة');
+      variations.push(text + 'ه');
+    }
+    
+    return variations;
+  };
+
   const generateAcceptedAnswers = (arabicText: string): string[] => {
     // تقسيم النص بناءً على الفاصل / أو \
     const meanings = arabicText.split(/[\/\\]/).map(meaning => meaning.trim()).filter(meaning => meaning.length > 0);
@@ -67,13 +87,38 @@ const CreateVocabQuizModal: React.FC<CreateVocabQuizModalProps> = ({ isOpen, onC
       // إضافة الإجابة الأصلية والمطبعة
       allAcceptedAnswers.push(originalAnswer, baseAnswer);
       
-      // إضافة نسخ مع اللواحق المختلفة
-      const suffixes = ['ة', 'ه', 'ات', 'ون', 'ين', 'ان'];
-      suffixes.forEach(suffix => {
-        allAcceptedAnswers.push(baseAnswer + suffix);
-        if (!originalAnswer.endsWith(suffix)) {
-          allAcceptedAnswers.push(originalAnswer + suffix);
+      // إنشاء اختلافات المذكر والمؤنث
+      const genderVariationsBase = generateGenderVariations(baseAnswer);
+      const genderVariationsOriginal = generateGenderVariations(originalAnswer);
+      
+      allAcceptedAnswers.push(...genderVariationsBase, ...genderVariationsOriginal);
+      
+      // إضافة نسخ مع وبدون "ال" التعريف لجميع الاختلافات
+      [...genderVariationsBase, ...genderVariationsOriginal].forEach(variation => {
+        const withoutAl = removeDefiniteArticle(variation);
+        if (withoutAl !== variation) {
+          allAcceptedAnswers.push(withoutAl);
         }
+        
+        // إضافة نسخ مع "ال" التعريف إذا لم تكن موجودة
+        if (!variation.startsWith('ال')) {
+          allAcceptedAnswers.push('ال' + variation);
+        }
+      });
+      
+      // إضافة نسخ مع اللواحق المختلفة لجميع الاختلافات
+      const suffixes = ['ات', 'ون', 'ين', 'ان'];
+      const allVariations = [...genderVariationsBase, ...genderVariationsOriginal];
+      
+      allVariations.forEach(variation => {
+        const withoutAl = removeDefiniteArticle(variation);
+        
+        suffixes.forEach(suffix => {
+          allAcceptedAnswers.push(variation + suffix);
+          allAcceptedAnswers.push(withoutAl + suffix);
+          allAcceptedAnswers.push('ال' + variation + suffix);
+          allAcceptedAnswers.push('ال' + withoutAl + suffix);
+        });
       });
     });
     
