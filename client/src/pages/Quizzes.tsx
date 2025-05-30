@@ -9,10 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { subjectOptions } from "@/components/SubjectIcons";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import CreateVocabQuizModal from "@/components/CreateVocabQuizModal";
 
 const Quizzes: React.FC = () => {
   const { isAdmin } = useAuth();
   const [showCreateQuizModal, setShowCreateQuizModal] = React.useState(false);
+  const [showCreateVocabQuizModal, setShowCreateVocabQuizModal] = useState(false);
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const { quizzes, isLoading, error, searchQuizByCode } = useQuizzes();
   const [searchQuery, setSearchQuery] = useState("");
@@ -75,14 +77,24 @@ const Quizzes: React.FC = () => {
 
 
           {!showCreateQuizModal && (
-            <Button
-              variant="default"
-              className="bg-secondary hover:bg-secondary/90 flex items-center space-x-1 space-x-reverse"
-              onClick={() => setShowCreateQuizModal(true)}
-            >
-              <PlusIcon className="h-4 w-4 ml-2" />
-              <span>إنشاء اختبار جديد</span>
-            </Button>
+            <>
+              <Button 
+                onClick={() => setShowCreateQuizModal(true)} 
+                variant="default"
+                className="bg-secondary hover:bg-secondary/90 flex items-center space-x-1 space-x-reverse"
+              >
+                <PlusIcon className="h-4 w-4 ml-2" />
+                <span>إنشاء اختبار جديد</span>
+              </Button>
+              <Button 
+                onClick={() => setShowCreateVocabQuizModal(true)} 
+                variant="outline"
+                className="flex items-center space-x-1 space-x-reverse"
+              >
+                <PlusIcon className="h-4 w-4 ml-2" />
+                <span>اختبار كلمات إنجليزية</span>
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -111,9 +123,14 @@ const Quizzes: React.FC = () => {
         </div>
       )}
 
-      <CreateQuizModal
-        isOpen={showCreateQuizModal}
-        onClose={() => setShowCreateQuizModal(false)}
+      <CreateQuizModal 
+        isOpen={showCreateQuizModal} 
+        onClose={() => setShowCreateQuizModal(false)} 
+      />
+
+      <CreateVocabQuizModal 
+        isOpen={showCreateVocabQuizModal} 
+        onClose={() => setShowCreateVocabQuizModal(false)} 
       />
     </div>
   );
