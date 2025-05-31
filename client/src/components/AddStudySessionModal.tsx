@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import dayjs from "dayjs";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 // Custom TimePicker Component
 function TimePicker({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder: string }) {
@@ -28,7 +30,7 @@ function TimePicker({ value, onChange, placeholder }: { value: string; onChange:
       const hour24 = parseInt(h);
       const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
       const periodValue = hour24 >= 12 ? 'PM' : 'AM';
-      
+
       setHours(hour12.toString());
       setMinutes(m);
       setPeriod(periodValue);
@@ -44,7 +46,7 @@ function TimePicker({ value, onChange, placeholder }: { value: string; onChange:
     let hour24 = parseInt(hours);
     if (period === 'PM' && hour24 !== 12) hour24 += 12;
     if (period === 'AM' && hour24 === 12) hour24 = 0;
-    
+
     const timeValue = `${hour24.toString().padStart(2, '0')}:${minutes.padStart(2, '0')}`;
     onChange(timeValue);
     setIsOpen(false);
@@ -65,12 +67,12 @@ function TimePicker({ value, onChange, placeholder }: { value: string; onChange:
     // Extract AM/PM from the Arabic text
     const actualPeriod = selectedPeriod.includes('AM') ? 'AM' : 'PM';
     setPeriod(actualPeriod);
-    
+
     // Use the extracted period for calculation
     let hour24 = parseInt(hours);
     if (actualPeriod === 'PM' && hour24 !== 12) hour24 += 12;
     if (actualPeriod === 'AM' && hour24 === 12) hour24 = 0;
-    
+
     const timeValue = `${hour24.toString().padStart(2, '0')}:${minutes.padStart(2, '0')}`;
     onChange(timeValue);
     setIsOpen(false);
@@ -215,6 +217,7 @@ export default function AddStudySessionModal({ open, onClose, onAdd }: AddStudyS
   const [lessons, setLessons] = useState<string[]>([""]);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth(); // Get the current user
 
   const addLesson = () => {
     setLessons(prev => [...prev, ""]);
@@ -229,23 +232,30 @@ export default function AddStudySessionModal({ open, onClose, onAdd }: AddStudyS
   };
 
   const checkTimeConflict = (newStartTime: string, newEndTime: string, newDate: Date): boolean => {
-    const existingSessions = JSON.parse(localStorage.getItem('studySessions') || '[]') as StudySession[];
+    // Retrieve study sessions from Firebase, specific to the user
+    if (!user) {
+      console.warn("User is not logged in. Cannot check for time conflicts.");
+      return false;
+    }
+  
+    // Retrieve study sessions from Firebase, specific to the user
+    const userStudySessions = JSON.parse(localStorage.getItem('studySessions') || '[]') as StudySession[];
     const newDateStr = dayjs(newDate).format("YYYY-MM-DD");
-    
-    for (const session of existingSessions) {
+
+    for (const session of userStudySessions) {
       if (session.status === 'active') {
         const sessionDate = dayjs(session.startDate).format("YYYY-MM-DD");
-        
+
         if (sessionDate === newDateStr) {
           const sessionStart = dayjs(session.startDate).format("HH:mm");
           const sessionEnd = dayjs(session.endDate).format("HH:mm");
-          
+
           // Check for time overlap
           const newStart = dayjs(`${newDateStr} ${newStartTime}`);
           const newEnd = dayjs(`${newDateStr} ${newEndTime}`);
           const existingStart = dayjs(`${newDateStr} ${sessionStart}`);
           const existingEnd = dayjs(`${newDateStr} ${sessionEnd}`);
-          
+
           if (
             (newStart >= existingStart && newStart < existingEnd) ||
             (newEnd > existingStart && newEnd <= existingEnd) ||
@@ -253,7 +263,7 @@ export default function AddStudySessionModal({ open, onClose, onAdd }: AddStudyS
           ) {
             const subjectName = subjectOptions.find(s => s.value === session.subject)?.label || session.subject;
             const newSubjectName = subjectOptions.find(s => s.value === subject)?.label || subject;
-            
+
             toast({
               title: "تعارض في الوقت",
               description: `مادة ${newSubjectName} تتعارض مع مادة ${subjectName} في نفس الوقت`,
@@ -268,9 +278,19 @@ export default function AddStudySessionModal({ open, onClose, onAdd }: AddStudyS
     return false;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (!user) {
+      toast({
+        title: "غير مسجل",
+        description: "يرجى تسجيل الدخول لإضافة مادة",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+
     if (!subject || !date || !startTime || !endTime || lessons.some(l => !l.trim())) {
       toast({
         title: "خطأ في البيانات",
@@ -284,7 +304,7 @@ export default function AddStudySessionModal({ open, onClose, onAdd }: AddStudyS
     // Check if end time is after start time
     const start = dayjs(`2000-01-01 ${startTime}`);
     const end = dayjs(`2000-01-01 ${endTime}`);
-    
+
     if (end <= start) {
       toast({
         title: "خطأ في الوقت",
@@ -310,13 +330,15 @@ export default function AddStudySessionModal({ open, onClose, onAdd }: AddStudyS
     const startDateTime = `${dateStr}T${startTime}`;
     const endDateTime = `${dateStr}T${endTime}`;
 
-    onAdd({
+    const newSession = {
       subject,
       startDate: startDateTime,
       endDate: endDateTime,
       lessons: filteredLessons,
       status: 'active'
-    });
+    };
+
+    onAdd(newSession);
 
     // Reset form
     setSubject("");
@@ -337,7 +359,7 @@ export default function AddStudySessionModal({ open, onClose, onAdd }: AddStudyS
         <DialogHeader>
           <DialogTitle>إضافة مادة للمذاكرة</DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <Label htmlFor="subject" className="text-base font-medium">المادة</Label>
@@ -406,7 +428,7 @@ export default function AddStudySessionModal({ open, onClose, onAdd }: AddStudyS
                 placeholder="اختر وقت البداية"
               />
             </div>
-            
+
             <div>
               <Label className="text-base font-medium">وقت النهاية</Label>
               <TimePicker
@@ -424,7 +446,7 @@ export default function AddStudySessionModal({ open, onClose, onAdd }: AddStudyS
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            
+
             <div className="space-y-3">
               {lessons.map((lesson, index) => (
                 <div key={index} className="flex gap-2">

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuizzes } from "@/hooks/useQuizzes";
 import {
   Dialog,
@@ -23,6 +23,7 @@ import { X, ArrowRight, ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { Questions, Question } from "@shared/schema";
 import { subjectOptions } from "./SubjectIcons";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/hooks/useAuth";
 
 interface CreateQuizModalProps {
   isOpen: boolean;
@@ -64,7 +65,8 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({ isOpen, onClose }) =>
   const [currentStep, setCurrentStep] = useState(1);
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
-  const [creator, setCreator] = useState("");
+  const { userName } = useAuth();
+  const [creator, setCreator] = useState(userName || "");
   const [description, setDescription] = useState("");
   const [questions, setQuestions] = useState<Questions>([{ ...emptyQuestion }]);
   const [quizCode, setQuizCode] = useState("");
@@ -72,6 +74,13 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({ isOpen, onClose }) =>
 
   const { createQuiz, isCreating } = useQuizzes();
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.displayName) {
+      setCreator(user.displayName);
+    }
+  }, [user]);
 
   const handleNextStep = () => {
     if (currentStep === 1) {
@@ -177,12 +186,19 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({ isOpen, onClose }) =>
     setCurrentStep(1);
     setTitle("");
     setSubject("");
-    setCreator("");
+    setCreator(userName || "");
     setDescription("");
     setQuestions([{ ...emptyQuestion }]);
     setQuizCode("");
     onClose();
   };
+
+  // تحديث اسم المنشئ عند تغيير userName
+  useEffect(() => {
+    if (userName) {
+      setCreator(userName);
+    }
+  }, [userName]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -283,7 +299,7 @@ const CreateQuizModal: React.FC<CreateQuizModalProps> = ({ isOpen, onClose }) =>
                   placeholder="أدخل وصفاً مختصراً للاختبار"
                   rows={3}
                 />
-                
+
               </div>
             </div>
           )}

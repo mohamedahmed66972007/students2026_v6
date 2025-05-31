@@ -1,25 +1,48 @@
-import React, { useState, ReactNode } from "react";
-import { useLocation, Link } from "wouter";
-import { NavIcons } from "./SubjectIcons";
-import { useTheme } from "./ThemeProvider";
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import AdminLogin from "./AdminLogin";
+import { useTheme } from "@/components/ThemeProvider";
+import AuthModal from "@/components/AdminLogin";
+import AdminWelcome from "@/components/AdminWelcome";
+import AccountModal from "@/components/AccountModal";
+import { 
+  Button 
+} from "@/components/ui/button";
+import { 
+  Sun, 
+  Moon, 
+  FileText, 
+  Calendar, 
+  HelpCircle, 
+  Shield,
+  BarChart3,
+  BookOpen,
+  User, MessageCircle, BarChart3 as BarChart3Icon
+} from "lucide-react";
 import Footer from "./Footer";
-import { Button } from "@/components/ui/button";
-import { Sun, Moon, LogOut, User, MessageCircle, BarChart3 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { NavIcons } from "./SubjectIcons";
 
 interface LayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [location] = useLocation();
+  const { user, isAdmin, userName, adminNumber, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { isAdmin, logout } = useAuth();
-  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showAdminWelcome, setShowAdminWelcome] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
   const [showContact, setShowContact] = useState(false);
+
+  // عرض ترحيب المشرف عند تسجيل الدخول لأول مرة
+  useEffect(() => {
+    if (isAdmin && !userName) {
+      setShowAdminWelcome(true);
+    }
+  }, [isAdmin, userName]);
 
   const getCurrentSection = (): string => {
     if (location.startsWith("/analytics")) return "analytics";
@@ -49,7 +72,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   aria-label="التحليلات"
                   className="rounded-full"
                 >
-                  <BarChart3 className="h-5 w-5" />
+                  <BarChart3Icon className="h-5 w-5" />
                 </Button>
               </Link>
             )}
@@ -68,19 +91,25 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               )}
             </Button>
 
-            {!isAdmin ? (
-              <Button onClick={() => setShowAdminLogin(true)} className="flex items-center space-x-1 space-x-reverse">
-                <User className="h-4 w-4 ml-2" />
-                <span className="hidden sm:inline">تسجيل دخول المشرف</span>
-              </Button>
-            ) : (
-              <Button 
-                variant="destructive" 
-                onClick={logout} 
+            {user ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAccountModal(true)}
                 className="flex items-center space-x-1 space-x-reverse"
               >
-                <LogOut className="h-4 w-4 ml-2" />
-                <span className="hidden sm:inline">تسجيل خروج</span>
+                <User className="h-4 w-4 ml-2" />
+                <span className="hidden sm:inline">حسابي</span>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAuthModal(true)}
+                className="flex items-center space-x-1 space-x-reverse"
+              >
+                <Shield className="h-4 w-4 ml-2" />
+                <span className="hidden sm:inline">تسجيل الدخول</span>
               </Button>
             )}
           </div>
@@ -186,9 +215,21 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </div>
 
       {/* Admin Login Modal */}
-      <AdminLogin 
-        isOpen={showAdminLogin} 
-        onClose={() => setShowAdminLogin(false)} 
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
+
+      {/* Admin Welcome Modal */}
+      <AdminWelcome
+        isOpen={showAdminWelcome}
+        onClose={() => setShowAdminWelcome(false)}
+      />
+
+      {/* Account Modal */}
+      <AccountModal
+        isOpen={showAccountModal}
+        onClose={() => setShowAccountModal(false)}
       />
     </div>
   );
