@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useExams } from "@/hooks/useExams";
+import { useFirebaseExams } from "@/hooks/useFirebaseExams";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +36,8 @@ const AddExamModal: React.FC<AddExamModalProps> = ({ isOpen, onClose }) => {
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [topics, setTopics] = useState("");
 
-  const { addExamWeek, isAdding } = useExams();
+  const { addExam } = useFirebaseExams();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,6 +52,7 @@ const AddExamModal: React.FC<AddExamModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const topicsArray = topics.split("\n").filter(topic => topic.trim());
 
@@ -60,24 +62,16 @@ const AddExamModal: React.FC<AddExamModalProps> = ({ isOpen, onClose }) => {
           description: "يرجى إدخال الدروس المقررة",
           variant: "destructive",
         });
+        setIsSubmitting(false);
         return;
       }
 
       const examDate = dayjs(date);
-      const weekTitle = `امتحان ${subject} - ${examDate.format("DD/MM/YYYY")}`;
 
-      await addExamWeek({
-        weekTitle,
-        exam: {
-          subject,
-          date: examDate.format("YYYY-MM-DD"),
-          topics: topicsArray,
-          day: examDate.format("dddd"),
-        },
-      });
-
-      toast({
-        title: "تم إضافة الاختبار بنجاح",
+      await addExam({
+        subject,
+        date: examDate.format("YYYY-MM-DD"),
+        topics: topicsArray,
       });
 
       setSubject("");
@@ -85,11 +79,9 @@ const AddExamModal: React.FC<AddExamModalProps> = ({ isOpen, onClose }) => {
       setTopics("");
       onClose();
     } catch (error) {
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء إضافة الاختبار. يرجى المحاولة مرة أخرى.",
-        variant: "destructive",
-      });
+      console.error("Error adding exam:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -176,8 +168,8 @@ const AddExamModal: React.FC<AddExamModalProps> = ({ isOpen, onClose }) => {
             >
               إلغاء
             </Button>
-            <Button type="submit" disabled={isAdding}>
-              {isAdding ? (
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
                 <>
                   <span className="animate-spin ml-2">◌</span>
                   جاري الإضافة...
