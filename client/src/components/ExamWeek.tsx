@@ -16,7 +16,7 @@ dayjs.locale("ar");
 interface ExamWeekProps {
   week: ExamWeekType;
   exams: Exam[];
-  onDelete?: (id: number) => void;
+  onDelete?: (id: number | string) => void;
 }
 
 const ExamWeek: React.FC<ExamWeekProps> = ({ exams, onDelete }) => {
@@ -44,16 +44,17 @@ const ExamWeek: React.FC<ExamWeekProps> = ({ exams, onDelete }) => {
     const minutes = duration.minutes();
     const seconds = duration.seconds();
 
-    if (days > 1) return `باقي ${days} يوم`;
-    if (days === 1) return `باقي يوم و ${hours}:${minutes}:${seconds}`;
-    return `باقي ${hours}:${minutes}:${seconds}`;
+    if (days > 1) return `${days} يوم`;
+    if (days === 1) return `1 يوم ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   useEffect(() => {
     const updateTimes = () => {
       const times: { [key: string]: string } = {};
-      sortedExams.forEach((exam) => {
-        times[exam.id] = calculateRemainingTime(exam.date);
+      sortedExams.forEach((exam, index) => {
+        const validId = exam.id || `exam-${index}`;
+        times[validId] = calculateRemainingTime(exam.date);
       });
       setRemainingTimes(times);
     };
@@ -72,7 +73,7 @@ const ExamWeek: React.FC<ExamWeekProps> = ({ exams, onDelete }) => {
     setSortedExams(items);
   };
 
-  const deleteExam = (id: number) => {
+  const deleteExam = (id: number | string) => {
     onDelete?.(id);
   };
 
@@ -93,10 +94,13 @@ const ExamWeek: React.FC<ExamWeekProps> = ({ exams, onDelete }) => {
                 const subjectClass = getSubjectLightColor(exam.subject as any);
                 const subjectName = getSubjectName(exam.subject as any);
 
+                const validId = exam.id || `exam-${index}-${exam.subject}-${exam.date.replace(/[^\w]/g, '')}`;
+                const validDraggableId = `draggable-${validId}`;
+
                 return isDraggable ? (
                   <Draggable
-                    key={exam.id}
-                    draggableId={exam.id.toString()}
+                    key={validId}
+                    draggableId={validDraggableId}
                     index={index}
                   >
                     {(provided) => (
@@ -124,13 +128,13 @@ const ExamWeek: React.FC<ExamWeekProps> = ({ exams, onDelete }) => {
                               </Button>
                             )}
                           </div>
-                          <ExamDetails exam={exam} remainingTime={remainingTimes[exam.id]} />
+                          <ExamDetails exam={exam} remainingTime={remainingTimes[validId]} />
                         </Card>
                       </div>
                     )}
                   </Draggable>
                 ) : (
-                  <div key={exam.id}>
+                  <div key={validId}>
                     <Card className="overflow-hidden">
                       <div className={`p-4 ${subjectClass} flex items-center justify-between`}>
                         <div className="flex items-center gap-2">
@@ -151,7 +155,7 @@ const ExamWeek: React.FC<ExamWeekProps> = ({ exams, onDelete }) => {
                           </Button>
                         )}
                       </div>
-                      <ExamDetails exam={exam} remainingTime={remainingTimes[exam.id]} />
+                      <ExamDetails exam={exam} remainingTime={remainingTimes[validId]} />
                     </Card>
                   </div>
                 );
