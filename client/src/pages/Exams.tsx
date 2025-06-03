@@ -56,6 +56,21 @@ const Exams: React.FC = () => {
     return subjects[subject] || subject;
   };
 
+  const getDayInArabic = (date: string | dayjs.Dayjs) => {
+    const dayNames = {
+      'Sunday': 'الأحد',
+      'Monday': 'الاثنين', 
+      'Tuesday': 'الثلاثاء',
+      'Wednesday': 'الأربعاء',
+      'Thursday': 'الخميس',
+      'Friday': 'الجمعة',
+      'Saturday': 'السبت'
+    };
+    
+    const dayInEnglish = dayjs(date).format("dddd");
+    return dayNames[dayInEnglish as keyof typeof dayNames] || dayInEnglish;
+  };
+
   const exportToPDF = async () => {
     if (!exams || exams.length === 0) {
       toast({
@@ -259,7 +274,7 @@ const Exams: React.FC = () => {
                   <tr key={exam.id || `exam-${exam.subject}-${exam.date}-${index}`} className="hover:bg-blue-50 dark:hover:bg-gray-800 transition-all duration-200">
                     <td className="px-2 sm:px-4 py-3 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700">
                       <div className="font-medium text-xs sm:text-sm">{examDate.format("DD/MM/YYYY")}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">{examDate.format("dddd")}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{getDayInArabic(examDate)}</div>
                     </td>
                     <td className="px-2 sm:px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                       <div className="flex items-center gap-2 sm:gap-3">
@@ -417,7 +432,7 @@ const Exams: React.FC = () => {
                         </div>
                         <div className="text-sm text-gray-700 dark:text-gray-300">
                           <div className="font-medium">{examDate.format("DD/MM/YYYY")}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">{examDate.format("dddd")}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{getDayInArabic(examDate)}</div>
                         </div>
                       </div>
                     </div>
