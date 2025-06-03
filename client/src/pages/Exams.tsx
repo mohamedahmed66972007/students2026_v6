@@ -4,7 +4,7 @@ import { useFirebaseExams } from "@/hooks/useFirebaseExams";
 import ExamList from "@/components/ExamWeek";
 import AddExamModal from "@/components/AddExamModal";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, Download, Grid3X3, Table } from "lucide-react";
+import { PlusIcon, Download, LayoutGrid, List } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SubjectIcon, getSubjectLightColor, getSubjectName } from "@/components/SubjectIcons";
 import dayjs from "dayjs";
@@ -33,15 +33,13 @@ const Exams: React.FC = () => {
     }
   }, [exams, deleteExam]);
 
-  // تحديث الوقت المتبقي كل ثانية في عرض الجدول
+  // تحديث الوقت المتبقي كل ثانية
   useEffect(() => {
-    if (viewMode === 'table') {
-      const interval = setInterval(() => {
-        setTableUpdateTrigger(prev => prev + 1);
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [viewMode]);
+    const interval = setInterval(() => {
+      setTableUpdateTrigger(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const getSubjectNameLocal = (subject: string) => {
     const subjects: Record<string, string> = {
@@ -138,13 +136,13 @@ const Exams: React.FC = () => {
         sortedExams.forEach(exam => {
           htmlContent += `
             <tr>
-              <td class="table-cell">
+              <td class="table-cell" style="vertical-align: middle;">
                 ${exam.day}
               </td>
-              <td class="table-cell">
+              <td class="table-cell" style="vertical-align: middle;">
                 ${dayjs(exam.date).format("DD/MM/YYYY")}
               </td>
-              <td class="table-cell">
+              <td class="table-cell" style="vertical-align: middle;">
                 <div class="subject-name">
                   ${getSubjectNameLocal(exam.subject)}
                 </div>
@@ -207,19 +205,167 @@ const Exams: React.FC = () => {
 
   const TableView = () => (
     <div className="w-full" style={{ direction: 'rtl' }}>
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm min-w-[800px]">
-          <thead>
-            <tr className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 border-b-2 border-blue-200 dark:border-gray-600">
-              <th className="px-4 py-3 text-right text-xs font-bold text-gray-800 dark:text-gray-100 min-w-[120px] uppercase tracking-wider">التاريخ</th>
-              <th className="px-4 py-3 text-right text-xs font-bold text-gray-800 dark:text-gray-100 min-w-[140px] uppercase tracking-wider">المادة</th>
-              <th className="px-4 py-3 text-right text-xs font-bold text-gray-800 dark:text-gray-100 min-w-[130px] uppercase tracking-wider">الوقت المتبقي</th>
-              <th className="px-4 py-3 text-right text-xs font-bold text-gray-800 dark:text-gray-100 min-w-[200px] uppercase tracking-wider">الدروس المقررة</th>
-              {isAdmin && <th className="px-4 py-3 text-center text-xs font-bold text-gray-800 dark:text-gray-100 min-w-[80px] uppercase tracking-wider">الإجراءات</th>}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-600">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700">
+                <th className="px-2 sm:px-4 py-3 text-right text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600 first:rounded-tr-xl last:rounded-tl-xl">التاريخ</th>
+                <th className="px-2 sm:px-4 py-3 text-right text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">المادة</th>
+                <th className="px-2 sm:px-4 py-3 text-right text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">الوقت المتبقي</th>
+                <th className="px-2 sm:px-4 py-3 text-right text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">الدروس المقررة</th>
+                {isAdmin && <th className="px-2 sm:px-4 py-3 text-center text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600 last:rounded-tl-xl">الإجراءات</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {[...exams].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((exam, index) => {
+                // إضافة trigger للتحديث
+                tableUpdateTrigger;
+                const examDate = dayjs(exam.date).hour(3).minute(0);
+                const now = dayjs();
+                const diffDays = examDate.diff(now, 'day');
+                const diffHours = examDate.diff(now, 'hour') % 24;
+                const diffMinutes = examDate.diff(now, 'minute') % 60;
+                
+                let remainingTime = '';
+                let remainingTimeColor = '';
+                
+                const diffSeconds = examDate.diff(now, 'second') % 60;
+                
+                if (examDate.isBefore(now)) {
+                  remainingTime = "انتهى";
+                  remainingTimeColor = "text-red-600 dark:text-red-400 font-bold";
+                } else if (diffDays > 7) {
+                  remainingTime = `${diffDays} يوماً`;
+                  remainingTimeColor = "text-green-600 dark:text-green-400 font-medium";
+                } else if (diffDays > 3) {
+                  remainingTime = `${diffDays} أيام`;
+                  remainingTimeColor = "text-yellow-600 dark:text-yellow-400 font-medium";
+                } else if (diffDays >= 1) {
+                  remainingTime = `${diffDays} يوم ${diffHours.toString().padStart(2, '0')}:${diffMinutes.toString().padStart(2, '0')}:${diffSeconds.toString().padStart(2, '0')}`;
+                  remainingTimeColor = "text-orange-600 dark:text-orange-400 font-semibold";
+                } else {
+                  remainingTime = `${diffHours.toString().padStart(2, '0')}:${diffMinutes.toString().padStart(2, '0')}:${diffSeconds.toString().padStart(2, '0')}`;
+                  if (diffHours > 0) {
+                    remainingTimeColor = "text-red-600 dark:text-red-400 font-bold";
+                  } else if (diffMinutes > 0) {
+                    remainingTimeColor = "text-red-700 dark:text-red-300 font-bold animate-pulse";
+                  } else {
+                    remainingTimeColor = "text-red-800 dark:text-red-200 font-bold animate-pulse";
+                  }
+                }
+
+                return (
+                  <tr key={exam.id || `exam-${exam.subject}-${exam.date}-${index}`} className="hover:bg-blue-50 dark:hover:bg-gray-800 transition-all duration-200">
+                    <td className="px-2 sm:px-4 py-3 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700">
+                      <div className="font-medium text-xs sm:text-sm">{examDate.format("DD/MM/YYYY")}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{examDate.format("dddd")}</div>
+                    </td>
+                    <td className="px-2 sm:px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className={`p-1.5 sm:p-2 rounded-lg ${getSubjectLightColor(exam.subject as any)}`}>
+                          <SubjectIcon subject={exam.subject as any} size={14} className="sm:w-4 sm:h-4" />
+                        </div>
+                        <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {getSubjectNameLocal(exam.subject)}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                      <span className={`text-xs sm:text-sm font-semibold ${remainingTimeColor}`}>
+                        {remainingTime}
+                      </span>
+                    </td>
+                    <td className="px-2 sm:px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                      <div className="space-y-0.5 sm:space-y-1">
+                        {exam.topics.map((topic, topicIndex) => (
+                          <div key={topicIndex} className="flex items-start gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                            <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-blue-500 rounded-full mt-1.5 sm:mt-2 flex-shrink-0"></div>
+                            <span className="leading-tight">{topic}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    {isAdmin && (
+                      <td className="px-2 sm:px-4 py-3 text-center border-b border-gray-100 dark:border-gray-700">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deleteExam(exam.id)}
+                          className="text-xs px-1.5 py-1 sm:px-2"
+                        >
+                          حذف
+                        </Button>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">جدول الاختبارات</h2>
+
+        <div className="flex gap-2">
+          <Button onClick={exportToPDF} variant="outline">
+            <Download className="h-4 w-4 ml-2" />
+            تصدير PDF
+          </Button>
+          
+          <div className="flex border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+            <Button
+              variant={viewMode === 'cards' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('cards')}
+              className="rounded-none border-none"
+            >
+              <LayoutGrid className="h-4 w-4 ml-2" />
+              <span className="hidden sm:inline">بطاقات</span>
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className="rounded-none border-none"
+            >
+              <List className="h-4 w-4 ml-2" />
+              <span className="hidden sm:inline">جدول</span>
+            </Button>
+          </div>
+
+          {isAdmin && (
+            <Button 
+              onClick={() => setShowAddExamModal(true)} 
+              className="flex items-center space-x-1 space-x-reverse"
+            >
+              <PlusIcon className="h-4 w-4 ml-2" />
+              <span>إضافة اختبار</span>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-10">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-primary border-r-transparent"></div>
+          <p className="mt-4">جاري تحميل جدول الاختبارات...</p>
+        </div>
+      ) : error ? (
+        <div className="text-center py-10 text-destructive">
+          <p>حدث خطأ أثناء تحميل جدول الاختبارات. يرجى المحاولة مرة أخرى.</p>
+        </div>
+      ) : exams && exams.length > 0 ? (
+        viewMode === 'table' ? (
+          <TableView />
+        ) : (
+          <div className="w-full space-y-4" style={{ direction: 'rtl' }}>
             {[...exams].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((exam, index) => {
               // إضافة trigger للتحديث
               tableUpdateTrigger;
@@ -258,38 +404,24 @@ const Exams: React.FC = () => {
               }
 
               return (
-                <tr key={exam.id || `exam-${exam.subject}-${exam.date}-${index}`} className="hover:bg-blue-50 dark:hover:bg-gray-800 transition-all duration-200 border-b border-gray-100 dark:border-gray-700">
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                    <div className="font-medium">{examDate.format("DD/MM/YYYY")}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{examDate.format("dddd")}</div>
-                  </td>
-                  <td className="px-4 py-3">
+                <div key={exam.id || `exam-${exam.subject}-${exam.date}-${index}`} 
+                     className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-800 transition-all duration-200 p-4">
+                  <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${getSubjectLightColor(exam.subject as any)}`}>
-                        <SubjectIcon subject={exam.subject as any} size={18} />
+                        <SubjectIcon subject={exam.subject as any} size={16} />
                       </div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {getSubjectNameLocal(exam.subject)}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-sm font-semibold ${remainingTimeColor}`}>
-                      {remainingTime}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="space-y-1">
-                      {exam.topics.map((topic, topicIndex) => (
-                        <div key={topicIndex} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                          <span>{topic}</span>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {getSubjectNameLocal(exam.subject)}
                         </div>
-                      ))}
+                        <div className="text-sm text-gray-700 dark:text-gray-300">
+                          <div className="font-medium">{examDate.format("DD/MM/YYYY")}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{examDate.format("dddd")}</div>
+                        </div>
+                      </div>
                     </div>
-                  </td>
-                  {isAdmin && (
-                    <td className="px-4 py-3 text-center">
+                    {isAdmin && (
                       <Button
                         variant="destructive"
                         size="sm"
@@ -298,91 +430,31 @@ const Exams: React.FC = () => {
                       >
                         حذف
                       </Button>
-                    </td>
-                  )}
-                </tr>
+                    )}
+                  </div>
+                  
+                  <div className="mb-3">
+                    <span className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">الوقت المتبقي</span>
+                    <div className={`text-sm font-semibold ${remainingTimeColor} mt-1`}>
+                      {remainingTime}
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-xs font-bold text-gray-800 dark:text-gray-100 uppercase tracking-wider">الدروس المقررة</span>
+                    <div className="mt-2 space-y-1">
+                      {exam.topics.map((topic, topicIndex) => (
+                        <div key={topicIndex} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <span>{topic}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               );
             })}
-          </tbody>
-        </table>
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">جدول الاختبارات</h2>
-
-        <div className="flex gap-2">
-          <Button onClick={exportToPDF} variant="outline">
-            <Download className="h-4 w-4 ml-2" />
-            تصدير PDF
-          </Button>
-          
-          <div className="flex border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-            <Button
-              variant={viewMode === 'cards' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('cards')}
-              className="rounded-none border-none"
-            >
-              <Grid3X3 className="h-4 w-4 ml-2" />
-              <span className="hidden sm:inline">بطاقات</span>
-            </Button>
-            <Button
-              variant={viewMode === 'table' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('table')}
-              className="rounded-none border-none"
-            >
-              <Table className="h-4 w-4 ml-2" />
-              <span className="hidden sm:inline">جدول</span>
-            </Button>
           </div>
-
-          {isAdmin && (
-            <Button 
-              onClick={() => setShowAddExamModal(true)} 
-              className="flex items-center space-x-1 space-x-reverse"
-            >
-              <PlusIcon className="h-4 w-4 ml-2" />
-              <span>إضافة اختبار</span>
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="text-center py-10">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-primary border-r-transparent"></div>
-          <p className="mt-4">جاري تحميل جدول الاختبارات...</p>
-        </div>
-      ) : error ? (
-        <div className="text-center py-10 text-destructive">
-          <p>حدث خطأ أثناء تحميل جدول الاختبارات. يرجى المحاولة مرة أخرى.</p>
-        </div>
-      ) : exams && exams.length > 0 ? (
-        viewMode === 'table' ? (
-          <TableView />
-        ) : (
-          <ExamList 
-            exams={exams.map(exam => ({
-              id: exam.id,
-              subject: exam.subject,
-              date: exam.date,
-              day: exam.day,
-              topics: exam.topics,
-              weekId: 1
-            }))}
-            onDelete={(id: number | string) => {
-              const examToDelete = exams.find(e => e.id === id || e.id === id.toString());
-              if (examToDelete) {
-                deleteExam(examToDelete.id);
-              }
-            }}
-          />
         )
       ) : (
         <div className="text-center py-16 bg-gray-50 dark:bg-gray-800 rounded-lg">
