@@ -30,19 +30,19 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [location] = useLocation();
-  const { user, isAdmin, userName, adminNumber, logout } = useAuth();
+  const { user, isAdmin, userName, adminNumber, logout, hasSeenWelcome } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showAdminWelcome, setShowAdminWelcome] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showContact, setShowContact] = useState(false);
 
-  // عرض ترحيب المشرف عند تسجيل الدخول لأول مرة
+  // عرض ترحيب المشرف عند تسجيل الدخول لأول مرة فقط
   useEffect(() => {
-    if (isAdmin && !userName) {
+    if (isAdmin && user && !userName && !hasSeenWelcome(user.uid)) {
       setShowAdminWelcome(true);
     }
-  }, [isAdmin, userName]);
+  }, [isAdmin, user, userName, hasSeenWelcome]);
 
   const getCurrentSection = (): string => {
     if (location.startsWith("/analytics")) return "analytics";
