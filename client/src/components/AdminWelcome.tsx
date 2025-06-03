@@ -20,7 +20,7 @@ interface AdminWelcomeProps {
 }
 
 const AdminWelcome: React.FC<AdminWelcomeProps> = ({ isOpen, onClose }) => {
-  const { userName, adminNumber, updateUserName } = useAuth();
+  const { userName, adminNumber, updateUserName, user, markWelcomeSeen } = useAuth();
   const [newName, setNewName] = useState(userName);
   const { toast } = useToast();
 
@@ -36,10 +36,22 @@ const AdminWelcome: React.FC<AdminWelcomeProps> = ({ isOpen, onClose }) => {
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "خطأ",
+        description: "خطأ في تحديد المستخدم",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const success = await updateUserName(newName);
       
       if (success) {
+        // تسجيل أن المشرف قد رأى رسالة الترحيب
+        markWelcomeSeen(user.uid, newName);
+        
         toast({
           title: "تم التحديث بنجاح",
           description: "تم تحديث اسمك بنجاح",
