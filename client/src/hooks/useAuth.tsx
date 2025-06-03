@@ -23,6 +23,8 @@ interface AuthContextType {
   updateUserName: (name: string) => Promise<boolean>;
   resetPassword: (email: string) => Promise<boolean>;
   isLoading: boolean;
+  hasSeenWelcome: (adminId: string) => boolean;
+  markWelcomeSeen: (adminId: string, name: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,6 +45,54 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [adminNumber, setAdminNumber] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  // فحص ما إذا كان المشرف قد رأى رسالة الترحيب من قبل
+  const hasSeenWelcome = (adminId: string): boolean => {
+    const welcomeData = localStorage.getItem('adminWelcomeData');
+    if (!welcomeData) return false;
+    
+    try {
+      const data = JSON.parse(welcomeData);
+      return data[adminId]?.hasSeenWelcome || false;
+    } catch {
+      return false;
+    }
+  };
+
+  // تسجيل أن المشرف قد رأى رسالة الترحيب
+  const markWelcomeSeen = (adminId: string, name: string): void => {
+    const welcomeData = localStorage.getItem('adminWelcomeData');
+    let data = {};
+    
+    if (welcomeData) {
+      try {
+        data = JSON.parse(welcomeData);
+      } catch {
+        data = {};
+      }
+    }
+    
+    data[adminId] = {
+      hasSeenWelcome: true,
+      name: name,
+      lastSeen: new Date().toISOString()
+    };
+    
+    localStorage.setItem('adminWelcomeData', JSON.stringify(data));
+  };
+
+  // جلب اسم المشرف المحفوظ محلياً
+  const getStoredAdminName = (adminId: string): string => {
+    const welcomeData = localStorage.getItem('adminWelcomeData');
+    if (!welcomeData) return "";
+    
+    try {
+      const data = JSON.parse(welcomeData);
+      return data[adminId]?.name || "";
+    } catch {
+      return "";
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
@@ -52,6 +102,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const adminNum = ADMIN_UIDS[user.uid as keyof typeof ADMIN_UIDS];
         setIsAdmin(!!adminNum);
         setAdminNumber(adminNum || 0);
+
+        // إذا كان مشرف، تحقق من الاسم المحفوظ محلياً أولاً
+        if (adminNum) {
+          const storedName = getStoredAdminName(user.uid);
+          if (storedName) {
+            setUserName(storedName);
+            return;
+          }
+        }
 
         // جلب اسم المستخدم من Firestore
         try {
@@ -142,6 +201,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       await updateProfile(user, { displayName: name });
       await updateDoc(doc(db, "users", user.uid), { name });
       setUserName(name);
+      
+      // حفظ الاسم في التخزين المحلي إذا كان مشرف
+      if (isAdmin) {
+        markWelcomeSeen(user.uid, name);
+      }
+      
       return true;
     } catch (error) {
       console.error("Error updating name:", error);
@@ -170,7 +235,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       logout, 
       updateUserName,
       resetPassword,
-      isLoading 
+      isLoading,
+      hasSeenWelcome,
+      markWelcomeSeen
     }}>
       {children}
     </AuthContext.Provider>
