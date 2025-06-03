@@ -1,188 +1,140 @@
-
 import React, { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle,
-  DialogFooter 
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { useFirebaseExams } from "@/hooks/useFirebaseExams";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { X, LogOut } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface AccountModalProps {
+import dayjs from "dayjs";
+import "dayjs/locale/ar";
+dayjs.locale("ar");
+interface AddExamModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose }) => {
-  const { user, userName, updateUserName, resetPassword, logout } = useAuth();
-  const [newName, setNewName] = useState(userName);
+const AddExamModal: React.FC<AddExamModalProps> = ({ isOpen, onClose }) => {
+  const [subject, setSubject] = useState("");
+  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [topics, setTopics] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { addExam } = useFirebaseExams();
   const { toast } = useToast();
-
-  const handleUpdateName = async (e: React.FormEvent) => {
+  const subjects = [
+    { value: "arabic", label: "اللغة العربية" },
+    { value: "english", label: "اللغة الإنجليزية" },
+    { value: "math", label: "الرياضيات" },
+    { value: "chemistry", label: "الكيمياء" },
+    { value: "physics", label: "الفيزياء" },
+    { value: "biology", label: "الأحياء" },
+    { value: "geology", label: "الجيولوجيا" },
+    { value: "constitution", label: "الدستور" },
+    { value: "islamic", label: "التربية الإسلامية" },
+  ];
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!newName.trim()) {
+    if (!subject || !date || !topics) {
       toast({
         title: "خطأ",
-        description: "يرجى إدخال الاسم",
+        description: "يرجى ملء جميع الحقول",
         variant: "destructive",
       });
       return;
     }
-
-    try {
-      const success = await updateUserName(newName);
-      
-      if (success) {
-        toast({
-          title: "تم التحديث بنجاح",
-          description: "تم تحديث اسمك بنجاح",
-        });
-      } else {
-        toast({
-          title: "خطأ",
-          description: "فشل في تحديث الاسم",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
+    const topicsArray = topics.split("\n").filter(topic => topic.trim());
+    if (topicsArray.length === 0) {
       toast({
         title: "خطأ",
-        description: "حدث خطأ أثناء تحديث الاسم",
+        description: "يرجى إدخال الدروس المقررة",
         variant: "destructive",
       });
+      return;
     }
-  };
-
-  const handlePasswordReset = async () => {
-    if (!user?.email) return;
-    
+    setIsSubmitting(true);
     try {
-      const success = await resetPassword(user.email);
-      
-      if (success) {
-        toast({
-          title: "تم إرسال رابط إعادة تعيين كلمة المرور",
-          description: "تحقق من بريدك الإلكتروني",
-        });
-      } else {
-        toast({
-          title: "خطأ",
-          description: "فشل في إرسال رابط إعادة التعيين",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء إرسال رابط إعادة التعيين",
-        variant: "destructive",
+      await addExam({
+        subject,
+        date: dayjs(date).format("YYYY-MM-DD"),
+        topics: topicsArray,
       });
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      toast({
-        title: "تم تسجيل الخروج بنجاح",
-        description: "إلى اللقاء!",
-      });
+      setSubject("");
+      setDate(undefined);
+      setTopics("");
       onClose();
     } catch (error) {
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء تسجيل الخروج",
-        variant: "destructive",
-      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-right">حسابي</DialogTitle>
-          <Button
-            onClick={onClose}
-            variant="ghost"
-            size="icon"
-            className="absolute left-2 top-2"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <DialogTitle>إضافة امتحان جديد</DialogTitle>
         </DialogHeader>
-        
-        <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="profile">الملف الشخصي</TabsTrigger>
-            <TabsTrigger value="security">الأمان</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="profile">
-            <form onSubmit={handleUpdateName} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">البريد الإلكتروني</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={user?.email || ""}
-                  disabled
-                  className="bg-gray-100 dark:bg-gray-800"
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="subject">المادة</Label>
+            <Select value={subject} onValueChange={setSubject}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر المادة" />
+              </SelectTrigger>
+              <SelectContent>
+                {subjects.map((subj) => (
+                  <SelectItem key={subj.value} value={subj.value}>
+                    {subj.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>تاريخ الامتحان</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date ? dayjs(date).format("DD/MM/YYYY") : "اختر التاريخ"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={setDate}
+                  initialFocus
                 />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="name">الاسم</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <DialogFooter className="justify-end mt-6">
-                <Button type="submit">
-                  حفظ التغييرات
-                </Button>
-              </DialogFooter>
-            </form>
-          </TabsContent>
-          
-          <TabsContent value="security">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>إعادة تعيين كلمة المرور</Label>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  سيتم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني
-                </p>
-                <Button onClick={handlePasswordReset} variant="outline" className="w-full">
-                  إرسال رابط إعادة التعيين
-                </Button>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>تسجيل الخروج</Label>
-                <Button onClick={handleLogout} variant="destructive" className="w-full">
-                  <LogOut className="h-4 w-4 ml-2" />
-                  تسجيل الخروج
-                </Button>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="topics">الدروس المقررة</Label>
+            <Textarea
+              id="topics"
+              placeholder="اكتب كل درس في سطر منفصل"
+              value={topics}
+              onChange={(e) => setTopics(e.target.value)}
+              rows={5}
+            />
+          </div>
+          <div className="flex justify-end space-x-2 space-x-reverse">
+            <Button type="button" variant="outline" onClick={onClose}>
+              إلغاء
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "جاري الحفظ..." : "حفظ"}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
 };
-
-export default AccountModal;
+export default AddExamModal;
