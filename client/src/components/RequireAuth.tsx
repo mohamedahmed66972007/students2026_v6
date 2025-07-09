@@ -1,7 +1,6 @@
 
 import React, { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import AuthModal from "@/components/AdminLogin";
+import { useTelegramAuth } from "@/hooks/useTelegramAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock } from "lucide-react";
@@ -13,10 +12,9 @@ interface RequireAuthProps {
 
 const RequireAuth: React.FC<RequireAuthProps> = ({ 
   children, 
-  message = "يجب تسجيل الدخول للوصول إلى هذه الميزة" 
+  message = "يجب فتح التطبيق من تليجرام للوصول إلى هذه الميزة" 
 }) => {
-  const { user } = useAuth();
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const { user } = useTelegramAuth();
 
   if (!user) {
     return (
@@ -28,16 +26,11 @@ const RequireAuth: React.FC<RequireAuthProps> = ({
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-gray-600 dark:text-gray-400">{message}</p>
-            <Button onClick={() => setShowAuthModal(true)} className="w-full">
-              تسجيل الدخول
+            <Button disabled className="w-full">
+              يرجى فتح التطبيق من تليجرام
             </Button>
           </CardContent>
         </Card>
-        
-        <AuthModal 
-          isOpen={showAuthModal} 
-          onClose={() => setShowAuthModal(false)} 
-        />
       </div>
     );
   }

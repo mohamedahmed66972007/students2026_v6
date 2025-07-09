@@ -64,8 +64,10 @@ export const useFiles = (filters: FilesFilters = {}) => {
 
       const response = await fetch("/api/files", {
         method: "POST",
+        headers: {
+          'x-telegram-init-data': window.Telegram?.WebApp?.initData || ''
+        },
         body: formData,
-        credentials: "include",
       });
 
       if (!response.ok) {

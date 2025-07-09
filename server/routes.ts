@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
@@ -12,6 +13,23 @@ import {
   insertQuizSchema,
   insertQuizAttemptSchema
 } from "@shared/schema";
+import {
+  validateTelegramWebAppData,
+  getUserData,
+  getUserByUid,
+  sendFriendRequest,
+  acceptFriendRequest,
+  rejectFriendRequest,
+  getFriendRequests,
+  addAdmin,
+  isAdmin,
+  isMainAdmin,
+  getAllUsers,
+  updateStudySessions,
+  getFriendStudySessions,
+  StudySession,
+  sendFileNotification
+} from "./telegram";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -29,29 +47,238 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Middleware للتحقق من Telegram authentication
+function requireTelegramAuth(req: Request, res: Response, next: any) {
+  const initData = req.headers['x-telegram-init-data'] as string;
+
+  if (!initData) {
+    return res.status(401).json({ message: "Telegram authentication required" });
+  }
+
+  const user = validateTelegramWebAppData(initData);
+  if (!user) {
+    return res.status(401).json({ message: "Invalid Telegram authentication" });
+  }
+
+  req.telegramUser = user;
+  next();
+}
+
+// Middleware للتحقق من صلاحيات المشرف
+function requireAdmin(req: Request, res: Response, next: any) {
+  if (!req.telegramUser || !isAdmin(req.telegramUser.id)) {
+    return res.status(403).json({ message: "Admin access required" });
+  }
+  next();
+}
+
+// Middleware للتحقق من صلاحيات المشرف الأساسي
+function requireMainAdmin(req: Request, res: Response, next: any) {
+  if (!req.telegramUser || !isMainAdmin(req.telegramUser.id)) {
+    return res.status(403).json({ message: "Main admin access required" });
+  }
+  next();
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      telegramUser?: any;
+    }
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve uploaded files
   app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-  // Auth Routes
-  app.post("/api/auth/login", async (req: Request, res: Response) => {
-    const { username, password } = req.body;
+  // Telegram Auth Routes
+  app.post("/api/telegram/validate", async (req: Request, res: Response) => {
+    const { initData } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ message: "Username and password are required" });
+    if (!initData) {
+      return res.status(400).json({ message: "Init data required" });
     }
 
-    const isValid = await storage.validateAdmin(username, password);
+    const user = validateTelegramWebAppData(initData);
+    if (!user) {
+      return res.status(401).json({ message: "Invalid Telegram data" });
+    }
 
-    if (isValid) {
-      return res.status(200).json({ message: "Login successful" });
+    const userData = getUserData(user.id);
+    res.json({
+      user: {
+        ...user,
+        isAdmin: isAdmin(user.id),
+        isMainAdmin: isMainAdmin(user.id),
+        uid: userData?.uid
+      }
+    });
+  });
+
+  // User Routes
+  app.get("/api/user/profile", requireTelegramAuth, async (req: Request, res: Response) => {
+    const userData = getUserData(req.telegramUser.id);
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(userData);
+  });
+
+  // Friends Routes
+  // إرسال طلب صداقة
+  app.post('/api/friends/request', (req: Request, res: Response) => {
+    const initData = req.headers['x-telegram-init-data'] as string;
+    if (!initData) {
+      return res.status(401).json({ message: 'Telegram authentication required' });
+    }
+    const user = validateTelegramWebAppData(initData);
+    if (!user) {
+      return res.status(401).json({ message: 'Telegram authentication required' });
+    }
+
+    const { friendUid } = req.body;
+    const success = sendFriendRequest(user.id, friendUid);
+
+    if (success) {
+      res.json({ message: 'Friend request sent successfully' });
     } else {
-      return res.status(401).json({ message: "Invalid credentials" });
+      res.status(400).json({ message: 'Failed to send friend request' });
     }
   });
 
+  // قبول طلب صداقة
+  app.post('/api/friends/accept', (req: Request, res: Response) => {
+    const initData = req.headers['x-telegram-init-data'] as string;
+    if (!initData) {
+      return res.status(401).json({ message: 'Telegram authentication required' });
+    }
+    const user = validateTelegramWebAppData(initData);
+    if (!user) {
+      return res.status(401).json({ message: 'Telegram authentication required' });
+    }
+
+    const { requesterUid } = req.body;
+    const success = acceptFriendRequest(user.id, requesterUid);
+
+    if (success) {
+      res.json({ message: 'Friend request accepted' });
+    } else {
+      res.status(400).json({ message: 'Failed to accept friend request' });
+    }
+  });
+
+  // رفض طلب صداقة
+  app.post('/api/friends/reject', (req: Request, res: Response) => {
+    const initData = req.headers['x-telegram-init-data'] as string;
+    if (!initData) {
+      return res.status(401).json({ message: 'Telegram authentication required' });
+    }
+    const user = validateTelegramWebAppData(initData);
+    if (!user) {
+      return res.status(401).json({ message: 'Telegram authentication required' });
+    }
+
+    const { requesterUid } = req.body;
+    const success = rejectFriendRequest(user.id, requesterUid);
+
+    if (success) {
+      res.json({ message: 'Friend request rejected' });
+    } else {
+      res.status(400).json({ message: 'Failed to reject friend request' });
+    }
+  });
+
+  // جلب طلبات الصداقة
+  app.get('/api/friends/requests', (req: Request, res: Response) => {
+    const initData = req.headers['x-telegram-init-data'] as string;
+    if (!initData) {
+      return res.status(401).json({ message: 'Telegram authentication required' });
+    }
+    const user = validateTelegramWebAppData(initData);
+    if (!user) {
+      return res.status(401).json({ message: 'Telegram authentication required' });
+    }
+
+    const requests = getFriendRequests(user.id);
+    res.json(requests);
+  });
+
+  app.get("/api/friends", requireTelegramAuth, async (req: Request, res: Response) => {
+    const userData = getUserData(req.telegramUser.id);
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const friends = userData.friends.map(friendUid => {
+      const friend = getUserByUid(friendUid);
+      return friend ? {
+        uid: friend.uid,
+        firstName: friend.firstName,
+        lastName: friend.lastName,
+        username: friend.username
+      } : null;
+    }).filter(Boolean);
+
+    res.json(friends);
+  });
+
+  app.get("/api/friends/:uid/schedule", requireTelegramAuth, async (req: Request, res: Response) => {
+    const { uid } = req.params;
+    const sessions = getFriendStudySessions(req.telegramUser.id, uid);
+
+    if (sessions === null) {
+      return res.status(403).json({ message: "Cannot access friend's schedule" });
+    }
+
+    res.json(sessions);
+  });
+
+  // Study Sessions Routes
+  app.get("/api/study-sessions", requireTelegramAuth, async (req: Request, res: Response) => {
+    const userData = getUserData(req.telegramUser.id);
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(userData.studySessions);
+  });
+
+  app.post("/api/study-sessions", requireTelegramAuth, async (req: Request, res: Response) => {
+    const sessions: StudySession[] = req.body;
+    const success = updateStudySessions(req.telegramUser.id, sessions);
+
+    if (success) {
+      res.json({ message: "Study sessions updated successfully" });
+    } else {
+      res.status(400).json({ message: "Failed to update study sessions" });
+    }
+  });
+
+  // Admin Routes
+  app.post("/api/admin/add", requireMainAdmin, async (req: Request, res: Response) => {
+    const { telegramId } = req.body;
+
+    if (!telegramId) {
+      return res.status(400).json({ message: "Telegram ID required" });
+    }
+
+    const success = addAdmin(req.telegramUser.id, telegramId);
+    if (success) {
+      res.json({ message: "Admin added successfully" });
+    } else {
+      res.status(400).json({ message: "Failed to add admin" });
+    }
+  });
+
+  app.get("/api/admin/users", requireAdmin, async (req: Request, res: Response) => {
+    const users = getAllUsers();
+    res.json(users);
+  });
+
   // File Routes
-  app.get("/api/files", async (req: Request, res: Response) => {
+  app.get("/api/files", requireTelegramAuth, async (req: Request, res: Response) => {
     try {
       const subject = req.query.subject as string | undefined;
       const semester = req.query.semester as string | undefined;
@@ -89,7 +316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/files", upload.single("file"), async (req: Request, res: Response) => {
+  app.post("/api/files", requireAdmin, upload.single("file"), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -133,6 +360,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.file.buffer
       );
 
+      // Send notification to all users
+      await sendFileNotification(req.file.originalname, req.body.subject);
+
       res.status(201).json(file);
     } catch (error) {
       console.error("Error creating file:", error);
@@ -140,7 +370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/files/:id", async (req: Request, res: Response) => {
+  app.delete("/api/files/:id", requireAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const deleted = await storage.deleteFile(id);
@@ -157,7 +387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Exam Week Routes
-  app.get("/api/exam-weeks", async (_req: Request, res: Response) => {
+  app.get("/api/exam-weeks", requireTelegramAuth, async (_req: Request, res: Response) => {
     try {
       const examWeeks = await storage.getExamWeeks();
       res.json(examWeeks);
@@ -167,7 +397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/exam-weeks", async (req: Request, res: Response) => {
+  app.post("/api/exam-weeks", requireAdmin, async (req: Request, res: Response) => {
     try {
       const parseResult = insertExamWeekSchema.safeParse(req.body);
 
@@ -186,7 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/exam-weeks/:id", async (req: Request, res: Response) => {
+  app.delete("/api/exam-weeks/:id", requireAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       const deleted = await storage.deleteExamWeek(id);
@@ -371,7 +601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use((req, res, next) => {
     const start = Date.now();
     const path = req.path;
-    
+
     // Only count visits to main pages
     if (path === '/' || path === '/files' || path === '/exams' || path === '/quizzes') {
       visitorsCount++;
@@ -392,5 +622,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
-
-import express from "express";

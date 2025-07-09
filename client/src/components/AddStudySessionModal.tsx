@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import dayjs from "dayjs";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useTelegramAuth } from "@/hooks/useTelegramAuth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -217,7 +217,7 @@ export default function AddStudySessionModal({ open, onClose, onAdd }: AddStudyS
   const [lessons, setLessons] = useState<string[]>([""]);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth(); // Get the current user
+  const { user } = useTelegramAuth(); // Get the current user
 
   const addLesson = () => {
     setLessons(prev => [...prev, ""]);

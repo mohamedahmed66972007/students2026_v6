@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/hooks/useAuth";
+import { useTelegramAuth } from "@/hooks/useTelegramAuth";
 import { useTheme } from "@/components/ThemeProvider";
-import AuthModal from "@/components/AdminLogin";
-import AdminWelcome from "@/components/AdminWelcome";
 import AccountModal from "@/components/AccountModal";
 import { 
   Button 
@@ -17,7 +15,7 @@ import {
   Shield,
   BarChart3,
   BookOpen,
-  User, MessageCircle, BarChart3 as BarChart3Icon
+  User, MessageCircle, BarChart3 as BarChart3Icon, Users
 } from "lucide-react";
 import Footer from "./Footer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -30,19 +28,14 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [location] = useLocation();
-  const { user, isAdmin, userName, adminNumber, logout, hasSeenWelcome } = useAuth();
+  const { user, isAdmin, isMainAdmin, uid, logout } = useTelegramAuth();
   const { theme, toggleTheme } = useTheme();
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showAdminWelcome, setShowAdminWelcome] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showContact, setShowContact] = useState(false);
 
-  // عرض ترحيب المشرف عند تسجيل الدخول لأول مرة فقط
   useEffect(() => {
-    if (isAdmin && user && !userName && !hasSeenWelcome(user.uid)) {
-      setShowAdminWelcome(true);
-    }
-  }, [isAdmin, user, userName, hasSeenWelcome]);
+    // Intentionally left blank, removing admin welcome logic.
+  }, []);
 
   const getCurrentSection = (): string => {
     if (location.startsWith("/analytics")) return "analytics";
@@ -102,15 +95,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <span className="hidden sm:inline">حسابي</span>
               </Button>
             ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAuthModal(true)}
-                className="flex items-center space-x-1 space-x-reverse"
-              >
-                <Shield className="h-4 w-4 ml-2" />
-                <span className="hidden sm:inline">تسجيل الدخول</span>
-              </Button>
+              <div className="text-sm text-gray-500">
+                يرجى فتح التطبيق من تليجرام
+              </div>
             )}
           </div>
         </div>
@@ -146,7 +133,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   onClick={() => window.open('https://wa.me/+96566162173', '_blank')}
                 >
                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.390-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824z"/>
+                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.390-.087s1.011.477 1.184.564s.289.13.332.202c.045.072.045.419-.1.824z"/>
                   </svg>
                   واتساب
                 </Button>
@@ -187,12 +174,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <NavIcons.files className="text-lg" />
               <span className="text-xs mt-1">الملفات</span>
             </Link>
+             <Link href="/friends" className={`flex flex-col items-center p-2 ${
+              currentSection === "friends" ? "text-primary" : "text-gray-500 dark:text-gray-400"
+            }`}>
+              <Users className="text-lg" />
+              <span className="text-xs mt-1">الأصدقاء</span>
+            </Link>
             <Link href="/study-schedule" className={`flex flex-col items-center p-2 ${
               currentSection === "study-schedule" ? "text-primary" : "text-gray-500 dark:text-gray-400"
             }`}>
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><rect width="6" height="6" x="9" y="12" rx="1"/></svg>
               <span className="text-xs mt-1">جدول المذاكرة</span>
             </Link>
+           
             <Link href="/exams" className={`flex flex-col items-center p-2 ${
               currentSection === "exams" ? "text-primary" : "text-gray-500 dark:text-gray-400"
             }`}>
@@ -213,18 +207,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="hidden lg:block">
         <Footer />
       </div>
-
-      {/* Admin Login Modal */}
-      <AuthModal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
-      />
-
-      {/* Admin Welcome Modal */}
-      <AdminWelcome
-        isOpen={showAdminWelcome}
-        onClose={() => setShowAdminWelcome(false)}
-      />
 
       {/* Account Modal */}
       <AccountModal
